@@ -1,0 +1,211 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>FishGrid - Aquarium Shop</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" rel="stylesheet">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #e0f7fa;
+            color: #006064;
+            padding-top: 60px;
+        }
+        .navbar {
+            background-color: rgba(0, 151, 167, 0.2);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0, 151, 167, 0.1);
+            padding: 0.5rem 1rem;
+        }
+        .navbar-brand {
+            color: #006064 !important;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 0.5rem 1rem;
+            margin-right: 2rem;
+        }
+        .navbar-nav {
+            display: flex;
+            align-items: center;
+        }
+        .navbar-nav .nav-link {
+            color: #006064 !important;
+            margin-left: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .navbar-nav .nav-link:hover {
+            background-color: rgba(0, 151, 167, 0.1);
+        }
+        .navbar-nav .nav-link i {
+            margin-right: 5px;
+        }
+        .user-info {
+            margin-left: 1rem;
+        }
+        .user-info .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .user-info .nav-link:hover {
+            background-color: rgba(0, 151, 167, 0.1);
+        }
+        .user-name {
+            margin-right: 0.5rem;
+            font-weight: 500;
+            color: #006064;
+        }
+        .profile-icon {
+            font-size: 20px;
+            color: #006064;
+        }
+        .hero-section {
+            background-image: url('{% static "img/aquarium-bg.jpg" %}');
+            background-size: cover;
+            background-position: center;
+            color: #fff;
+            text-align: center;
+            padding: 100px 0;
+            margin-bottom: 50px;
+            position: relative;
+        }
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 151, 167, 0.6);
+        }
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+        .hero-section h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        .shop-card {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 151, 167, 0.1);
+            margin-bottom: 30px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .shop-card:hover {
+            box-shadow: 0 10px 15px rgba(0, 151, 167, 0.2);
+            transform: translateY(-5px);
+        }
+        .shop-image {
+            height: 200px;
+            object-fit: cover;
+        }
+        .shop-info {
+            padding: 20px;
+        }
+        .shop-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00838f;
+        }
+        .shop-location {
+            color: #0097a7;
+            margin-bottom: 5px;
+        }
+        .btn-view-more {
+            background-color: #00838f;
+            color: #fff;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .btn-view-more:hover {
+            background-color: #006064;
+            color: #fff;
+        }
+        footer {
+            background-color: rgba(0, 151, 167, 0.1);
+            color: #006064;
+            padding: 20px 0;
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'user:indexfish' %}">FishGrid</a>
+            <div class="navbar-nav ml-auto">
+                <a class="nav-item nav-link" href="{% url 'user:indexfish' %}">
+                    <i class="fas fa-home"></i> Home
+                </a>
+                <div class="user-info">
+                    <a class="nav-item nav-link" href="{% url 'user:user_dashboard' %}">
+                        <span class="user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                        <i class="fas fa-user-circle profile-icon"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="hero-section">
+        <div class="container hero-content">
+            <h1>Welcome to FishGrid</h1>
+            <p class="lead">Discover the best aquarium shops near you</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2 class="text-center mb-4" style="color: #00838f;">Registered Shops</h2>
+        <div class="row">
+            {% if shopdetails %}
+                {% for shop in shopdetails %}
+                <div class="col-md-4">
+                    <div class="shop-card">
+                        <img src="{{ shop.shop_image.url }}" alt="{{ shop.shop_name }}" class="shop-image w-100">
+                        <div class="shop-info">
+                            <h3 class="shop-name">{{ shop.shop_name }}</h3>
+                            <p class="shop-location"><i class="fas fa-map-marker-alt mr-2"></i>{{ shop.shop_location }}</p>
+                            <p class="shop-location"><i class="fas fa-phone-alt mr-2"></i>{{ shop.mobile_number }}</p>
+                            <a href="{% url 'shop:shop_product_views' shop.id %}" class="btn btn-view-more">View More</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12">
+                    <div class="alert alert-info text-center" role="alert" style="background-color: rgba(0, 151, 167, 0.1); color: #006064; border-color: #00838f;">
+                        No registered shops found.
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <footer>
+        <div class="container text-center">
+            <p>&copy; 2023 FishGrid. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

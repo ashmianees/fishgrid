@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {% load static %}
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <title>Admin Dashboard</title>
+    <meta content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, shrink-to-fit=no' name='viewport' />
+    <link rel="stylesheet" href="{% static 'assets/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i">
+    <link rel="stylesheet" href="{% static 'assets/css/ready.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'assets/css/demo.css' %}">
+
+    <style>
+        #logout-link {
+            margin-left: 30px;
+            margin-right: 5px; 
+        }
+        .logout-icon {
+            color: red; /* Color the icon red */
+            margin-right: 5px; /* Adjust the spacing as needed */
+        }
+        .blue-box .nav-item a:hover {
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }
+    </style>
+</head>
+<body>
+    <script>
+        // Prevent caching of the page
+        window.onload = function() {
+            window.history.forward();
+        }
+        window.onunload = function() { null };
+    </script>
+    <div class="wrapper">
+        <div class="main-header">
+            <div class="logo-header">
+                Business
+                <button class="navbar-toggler sidenav-toggler ml-auto" type="button" data-toggle="collapse" data-target="collapse" aria-controls="sidebar" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <button class="topbar-toggler more"><i class="la la-ellipsis-v"></i></button>
+            </div>
+            <nav class="navbar navbar-header navbar-expand-lg">
+                <div class="container-fluid">
+                    <ul class="navbar-nav topbar-nav ml-md-auto align-items-center">
+                        <li class="nav-item dropdown hidden-caret">
+                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="la la-bell"></i>
+                            </a>
+                            <ul class="dropdown-menu notif-box" aria-labelledby="navbarDropdown">
+                                <li>
+                                    <div class="notif-center">
+                                        <a href="#">
+                                            <div class="notif-icon notif-primary"> <i class="la la-user-plus"></i> </div>
+                                            <div class="notif-content">
+                                                <span class="block">
+                                                    New user registered
+                                                </span>
+                                                <span class="time">5 minutes ago</span> 
+                                            </div>
+                                        </a>
+                                    </div>
+                                </li>
+                            </ul>
+                        </li>
+                        <li>
+                            <span><strong>{{ request.user.email }}</strong></span>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+        </div>
+        <div class="sidebar">
+            <div class="scrollbar-inner sidebar-wrapper">
+                <div class="user">
+                    <div class="info">
+                        <span>
+                            Fish Grid
+                            <span class="user-level">Administrator</span>
+                        </span>
+                    </div>
+                </div>
+                <ul class="nav">
+                    <li class="nav-item active">
+                        <a href="{% url 'shop:shop_index' %}">
+                            <i class="la la-dashboard"></i>
+                            <p>Dashboard</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'shop:product_recommendations' %}">
+                            <i class="la la-lightbulb-o"></i>
+                            <p>Product Recommendations</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'shop:shop_profile_view' %}"> 
+                            <i class="la la-building"></i>
+                            <p>Shop Profile</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        {% if shop_detail %}
+                            <a href="{% url 'shop:order_list' shop_detail.id %}"> 
+                                <i class="la la-shopping-cart"></i>
+                                <p>Orders</p>
+                            </a>
+                        
+                        {% endif %}
+                    </li>
+                    <li class="nav-item">
+                        {% if shop_detail %}
+                            <a href="{% url 'shop:product_list' shop_detail.id %}"> 
+                                <i class="la la-building"></i>
+                                <p>Product</p>
+                            </a>
+                        
+                        {% endif %}
+                    </li>  
+                    <li class="nav-item">
+                        <a href="{% if shop_detail %}{% url 'shop:view_feedback_complaints' shop_id=shop_detail.id %}{% endif %}">
+                            <i class="la la-comments"></i>
+                            <p>Feedback & Complaints</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'shop:request_category' %}">
+                            <i class="la la-plus-circle"></i>
+                            <p>Request New Category</p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{% url 'shop:view_category_requests' %}">
+                            <i class="la la-list"></i>
+                            <p>My Category Requests</p>
+                        </a>
+                    </li>
+                    <div class="blue-box" style="background-color: #007bff; width: 100%; padding: 6px; margin-top: 20px;">
+                        <li class="nav-item">
+                            <a href="{% url 'main:logout' %}" style="color: white;">
+                                <i class="la la-power-off"></i>
+                                <p>Logout</p>
+                            </a>
+                        </li>
+                    </div>
+                    
+                </ul>
+            </div>
+        </div>
+        {% block content %}
+        {% endblock %}
+    </div>
+</body>
+<script src="{% static 'assets/js/core/jquery.3.2.1.min.js' %}"></script>
+<script src="{% static 'assets/js/plugin/jquery-ui-1.12.1.custom/jquery-ui.min.js' %}"></script>
+<script src="{% static 'assets/js/core/popper.min.js' %}"></script>
+<script src="{% static 'assets/js/core/bootstrap.min.js' %}"></script>
+<script src="{% static 'assets/js/plugin/chartist/chartist.min.js' %}"></script>
+<script src="{% static 'assets/js/plugin/chartist/plugin/chartist-plugin-tooltip.min.js' %}"></script>
+<script src="{% static 'assets/js/plugin/bootstrap-toggle/bootstrap-toggle.min.js' %}"></script>
+<script src="{% static 'assets/js/plugin/jquery-mapael/jquery.mapael.min.js' %}"></script>
+<script src="{% static 'assets/js/plugin/jquery-mapael/maps/world_countries.min.js' %}"></script>
+<script src="{% static 'assets/js/plugin/chart-circle/circles.min.js' %}"></script>
+<script src="{% static 'assets/js/plugin/jquery-scrollbar/jquery.scrollbar.min.js' %}"></script>
+<script src="{% static 'assets/js/ready.min.js' %}"></script>
+<script src="{% static 'assets/js/demo.js' %}"></script>
+</html>
