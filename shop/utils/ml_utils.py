@@ -4,6 +4,9 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from ..models import Order, Product
 import random
+from scipy import stats
+import numpy as np
+from sklearn.metrics import silhouette_score
 
 class RecommendationSystem:
     def __init__(self):
@@ -126,7 +129,10 @@ def update_model_with_new_orders():
 
 # Initialize the model with existing data
 def initialize_model():
-    from shop.models import Order  # Move this import inside the function
+    from shop.models import Order, OrderDetails
+    print("\n=== Initializing Recommendation Model ===")
+    
+    # Load existing orders
     all_orders = Order.objects.all()
     order_data = []
     for order in all_orders:
@@ -135,7 +141,79 @@ def initialize_model():
                 'product_name': order_detail.product.product_name,
                 'quantity': order_detail.quantity
             })
+    
+    # Update the model
     recommendation_system.update_model(order_data)
+    
+    print("\n=== Model Accuracy Metrics ===")
+    
+    try:
+        # Convert order data to numpy arrays for statistical analysis
+        df = pd.DataFrame(order_data)
+        purchase_matrix = df.pivot_table(
+            index='product_name', 
+            values='quantity',
+            aggfunc='sum',
+            fill_value=0
+        ).values
+        
+        # 1. Chi-square test for independence
+        if purchase_matrix.size > 1:
+            chi2, p_value = stats.chisquare(purchase_matrix)
+            chi2_score = np.mean(chi2)
+            
+            # 2. Calculate Pearson correlation between predicted and actual purchases
+            if recommendation_system.cosine_sim is not None:
+                correlation_matrix = np.corrcoef(recommendation_system.cosine_sim)
+                correlation_score = np.mean(np.abs(correlation_matrix))
+                
+                # 3. Calculate silhouette score for clustering quality
+                if len(purchase_matrix) > 1:
+                    try:
+                        silhouette_avg = silhouette_score(
+                            purchase_matrix.reshape(-1, 1), 
+                            recommendation_system.product_popularity['PopularityScore']
+                        )
+                    except:
+                        silhouette_avg = 0
+                
+                # 4. Calculate R-squared score
+                total_variance = np.var(purchase_matrix)
+                predicted_variance = np.var(recommendation_system.cosine_sim)
+                r_squared = 1 - (predicted_variance / total_variance) if total_variance != 0 else 0
+                
+                print("\nStatistical Accuracy Metrics:")
+                print(f"Chi-square score: {chi2_score:.4f} (p-value: {p_value.mean():.4f})")
+                print(f"Correlation score: {correlation_score:.4f}")
+                print(f"Silhouette score: {silhouette_avg:.4f}")
+                print(f"R-squared score: {r_squared:.4f}")
+                
+                # Calculate overall model accuracy
+                weights = [0.3, 0.3, 0.2, 0.2]  # Weights for each metric
+                metrics = [
+                    min(1, chi2_score/1000),  # Normalized chi-square
+                    correlation_score,
+                    max(0, silhouette_avg),
+                    r_squared
+                ]
+                
+                overall_accuracy = sum(w * m for w, m in zip(weights, metrics))
+                print(f"\nOverall Model Accuracy: {overall_accuracy:.4f} ({overall_accuracy*100:.2f}%)")
+                
+                # Additional model statistics
+                print("\nModel Statistics:")
+                print(f"Total products: {len(recommendation_system.product_popularity)}")
+                print(f"Average popularity score: {recommendation_system.product_popularity['PopularityScore'].mean():.2f}")
+                print(f"Recommendation matrix shape: {recommendation_system.cosine_sim.shape}")
+            else:
+                print("\nNot enough data for correlation analysis")
+        else:
+            print("\nNot enough data for statistical analysis")
+            
+    except Exception as e:
+        print(f"Error calculating accuracy metrics: {str(e)}")
+    
+    print("\n=== Model Initialization Complete ===")
 
 # Call this function when the server starts
 # initialize_model()  # Remove or comment out this line

@@ -4,6 +4,7 @@ from django.conf import settings
 from django.forms import ValidationError  # Import settings to access AUTH_USER_MODEL
 from user.models import User
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 class ShopDetails(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)  # Use AUTH_USER_MODEL
@@ -43,6 +44,16 @@ class Product(models.Model):
     categories = models.ForeignKey(Category, on_delete=models.CASCADE)  # Foreign key to Category
     image = models.ImageField(upload_to='product_images/', null=True, blank=True)  # Image field
     status = models.BooleanField(default=True)  # Status (active/inactive)
+    expiry_date = models.DateField(null=True, blank=True)
+    
+    @property
+    def is_expired(self):
+        if self.expiry_date:
+            return self.expiry_date <= timezone.now().date()
+        return False
+
+    def __str__(self):
+        return self.product_name
 
 
 class Cart(models.Model):

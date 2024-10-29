@@ -1,4 +1,4 @@
-from django.http import JsonResponse
+from django.http import Http404, JsonResponse
 from django.contrib.auth import authenticate
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
@@ -9,6 +9,7 @@ from django.conf import settings
 from shop.models import Payment
 import razorpay
 from django.db.models import Q
+from django.utils import timezone
 
 from .models import Cart, CartItem, Category, Complaint, Wishlist
 from django.views.decorators.http import require_POST
@@ -50,10 +51,18 @@ def shop_product_views(request, shop_id):
     shop = get_object_or_404(ShopDetails, id=shop_id)
     categories = Category.objects.filter(is_active=True)
     selected_category = request.GET.get('category', '')
-    products = Product.objects.filter(shop_id=shop_id, categories__is_active=True, status=True)
+    
+    # Filter out expired products
+    products = Product.objects.filter(
+        shop_id=shop_id,
+        categories__is_active=True,
+        status=True
+    ).exclude(
+        Q(expiry_date__isnull=False) & Q(expiry_date__lte=timezone.now().date())
+    )
     
     if selected_category and selected_category.isdigit():
-        products = products.filter(categories__id=selected_category, categories__is_active=True)
+        products = products.filter(categories__id=selected_category)
     
     search_query = request.GET.get('search', '')
     if search_query:
@@ -74,6 +83,11 @@ def shop_product_views(request, shop_id):
 def view_singleproduct(request, product_id, shop_id):
     product = get_object_or_404(Product, id=product_id, shop__id=shop_id, categories__is_active=True)
     shop = product.shop
+    
+    # If user is not the shop owner and product is expired, return 404
+    if request.user != shop.user and product.expiry_date and product.expiry_date <= timezone.now().date():
+        raise Http404("Product not found")
+        
     category = product.categories
     feedback = Feedback.objects.filter(product=product).order_by('-created_at')
     is_in_wishlist = False
@@ -81,8 +95,6 @@ def view_singleproduct(request, product_id, shop_id):
 
     if request.user.is_authenticated:
         is_in_wishlist = Wishlist.objects.filter(user=request.user, product=product).exists()
-        
-        # Check if the user has purchased the product
         has_purchased = Order.objects.filter(
             user=request.user,
             order_details__product=product
@@ -277,7 +289,7 @@ def product_detail(request, product_id):
 
 def product_add(request):
     try:
-        shop_details = ShopDetails.objects.get(user=request.user)  # Get single shop details for the user
+        shop_details = ShopDetails.objects.get(user=request.user)
     except ShopDetails.DoesNotExist:
         return HttpResponseBadRequest("Shop details not found for the user.")
     
@@ -289,10 +301,13 @@ def product_add(request):
         quantity = request.POST.get('product_quantity') 
         category_id = request.POST.get('product_category')  # New field for category
         image = request.FILES.get('product_image')
-
+        expiry_date = request.POST.get('expire_date')  # Get expiry date from form
+        
         if product_name and description and price and category_id:  # Basic validation
             category = Category.objects.get(id=category_id)  # Fetch the category by id
-            Product.objects.create(
+            
+            # Create product with optional expiry date
+            product = Product.objects.create(
                 product_name=product_name,
                 product_description=description,
                 price=price,
@@ -300,7 +315,8 @@ def product_add(request):
                 quantity=quantity,
                 categories=category,  # Associate with the category instance
                 image=image,
-                shop_id=shop_details.id  # Link to the logged-in user's shop by ID
+                shop_id=shop_details.id,
+                expiry_date=expiry_date if expiry_date else None  # Set expiry date if provided
             )
             return redirect('shop:product_list', shop_id=shop_details.id)  # Redirect to the product list with shop_id
 
@@ -310,7 +326,7 @@ def product_add(request):
 def product_edit(request):
     if request.method == 'POST':
         product_id = request.POST.get('product_id')
-        product = get_object_or_404(Product, id=product_id)  # Use 'id' instead of 'product_id'
+        product = get_object_or_404(Product, id=product_id)
 
         product_name = request.POST.get('product_name')
         description = request.POST.get('product_description')
@@ -320,6 +336,7 @@ def product_edit(request):
         add_quantity = int(request.POST.get('add_quantity', 0))  # Get the additional quantity
         category_id = request.POST.get('product_category')
         image = request.FILES.get('product_image')
+        expiry_date = request.POST.get('expire_date')
 
         if product_name and description and price and category_id:
             category = Category.objects.get(id=category_id)
@@ -327,15 +344,16 @@ def product_edit(request):
             product.product_description = description
             product.price = price
             product.size = size
-            product.quantity = int(quantity) + add_quantity  # Update the quantity
+            product.quantity = int(quantity) + add_quantity
             product.categories = category
+            product.expiry_date = expiry_date if expiry_date else None
             if image:
                 product.image = image
             product.save()
 
-            return redirect('shop:product_list', shop_id=product.shop.id)  # Redirect to the product list with shop_id
+            return redirect('shop:product_list', shop_id=product.shop.id)
 
-    categories = Category.objects.filter(is_active=True)  # Only fetch active categories
+    categories = Category.objects.filter(is_active=True)
     return render(request, 'shop/shop_product.html', {'categories': categories})
 
 def product_disable(request):
@@ -705,18 +723,25 @@ def filter_products(request, shop_id):
     search = request.GET.get('search', '')
     category = request.GET.get('category', '')
     
-    # Show all products (including disabled) only if the current user is the shop owner
-    if request.user == shop.user:
-        products = Product.objects.filter(shop=shop)
-    else:
-        products = Product.objects.filter(shop=shop, status=True)
+    # Base query for products in this shop
+    products = Product.objects.filter(shop=shop)
     
+    # If user is not the shop owner, filter out disabled and expired products
+    if request.user != shop.user:
+        products = products.filter(
+            status=True
+        ).exclude(
+            Q(expiry_date__isnull=False) & Q(expiry_date__lte=timezone.now().date())
+        )
+    
+    # Apply search filter if provided
     if search:
         products = products.filter(
             Q(product_name__icontains=search) |
             Q(product_description__icontains=search)
         )
     
+    # Apply category filter if provided
     if category:
         products = products.filter(categories__id=category)
     
@@ -728,7 +753,9 @@ def filter_products(request, shop_id):
             'price': str(product.price),
             'image': product.image.url if product.image else None,
             'shop_id': shop.id,
-            'status': product.status
+            'status': product.status,
+            'is_expired': bool(product.expiry_date and product.expiry_date <= timezone.now().date()),
+            'expiry_date': product.expiry_date.strftime('%Y-%m-%d') if product.expiry_date else None
         }
         for product in products
     ]
@@ -995,3 +1022,7 @@ def toggle_product(request, product_id):
     else:
         messages.error(request, 'You do not have permission to perform this action.')
     return redirect('shop:product_list', shop_id=product.shop.id)
+
+
+
+
