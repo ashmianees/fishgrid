@@ -65,7 +65,8 @@
                 </div>
                 <div class="form-group">
                     <label for="expiryDate">Expiry Date (Optional)</label>
-                    <input type="text" class="form-control datepicker" id="expiryDate" name="expiry_date">
+                    <input type="date" class="form-control" id="expiryDate" name="expire_date" min="{{ today|date:'Y-m-d' }}">
+                    <small class="text-muted">Leave empty if product has no expiry date</small>
                     <div class="error-message" id="expiryDate-error"></div>
                 </div>
                 <button type="submit" class="btn btn-primary">Add Product</button>
@@ -115,7 +116,8 @@ $(document).ready(function() {
                 accept: "image/*"
             },
             expiry_date: {
-                date: true
+                required: false,  // Make it optional
+                date: true       // Still validate if a date is entered
             }
         },
         messages: {
@@ -164,6 +166,26 @@ $(document).ready(function() {
         },
         submitHandler: function(form) {
             form.submit();
+        }
+    });
+
+    // Add custom validation for future date if a date is entered
+    $('#expiryDate').on('change', function() {
+        if (this.value) {
+            const selectedDate = new Date(this.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDate <= today) {
+                $('#expiryDate-error').text('Expiry date must be in the future.');
+                $(this).addClass('is-invalid');
+            } else {
+                $('#expiryDate-error').text('');
+                $(this).removeClass('is-invalid');
+            }
+        } else {
+            $('#expiryDate-error').text('');
+            $(this).removeClass('is-invalid');
         }
     });
 

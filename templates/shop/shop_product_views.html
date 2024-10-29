@@ -158,13 +158,26 @@
                     $.each(data.products, function(index, product) {
                         var productHtml = `
                             <div class="col-md-4 mb-4">
-                                <div class="card h-100">
+                                <div class="card h-100 ${product.is_expired ? 'bg-light' : ''}">
                                     ${product.image ? `<img src="${product.image}" class="card-img-top" alt="${product.name}" style="height: 200px; object-fit: cover;">` : ''}
                                     <div class="card-body d-flex flex-column">
                                         <h5 class="card-title">${product.name}</h5>
                                         <p class="card-text flex-grow-1">${product.description}</p>
                                         <p class="card-text"><strong>Price: ₹${product.price}</strong></p>
-                                        <a href="/shop/single_product/${product.id}/${product.shop_id}/" class="btn btn-primary mt-auto">View Details</a>
+                                        ${product.expiry_date ? `
+                                            <p class="card-text ${product.is_expired ? 'text-danger' : 'text-info'}">
+                                                <small>
+                                                    ${product.is_expired ? 'Expired on: ' : 'Expires on: '}${product.expiry_date}
+                                                </small>
+                                            </p>
+                                        ` : ''}
+                                        ${!product.is_expired ? `
+                                            <a href="/shop/single_product/${product.id}/${product.shop_id}/" class="btn btn-primary mt-auto">View Details</a>
+                                        ` : `
+                                            <div class="alert alert-warning mt-auto mb-0">
+                                                <small>This product has expired</small>
+                                            </div>
+                                        `}
                                     </div>
                                 </div>
                             </div>

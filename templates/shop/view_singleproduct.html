@@ -102,6 +102,31 @@
         .btn-outline-primary:not(:disabled):not(.disabled).active:focus {
             box-shadow: 0 0 0 0.2rem rgba(0, 131, 143, 0.5);
         }
+
+        .badge {
+            margin-left: 10px;
+            padding: 5px 10px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+        
+        .badge-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        
+        .badge-success {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .text-danger {
+            color: #dc3545 !important;
+        }
+        
+        .text-info {
+            color: #17a2b8 !important;
+        }
     </style>
 </head>
 
@@ -152,6 +177,16 @@
                     <p class="lead">{{ product.product_description }}</p>
                     <h3>Price: ₹{{ product.price }}</h3>
                     <p>Size: {{ product.size }}</p>
+                    {% if product.expiry_date %}
+                        <p class="{% if product.is_expired %}text-danger{% else %}text-info{% endif %}">
+                            Expiry Date: {{ product.expiry_date|date:"F d, Y" }}
+                            {% if product.is_expired %}
+                                <span class="badge badge-danger">Expired</span>
+                            {% else %}
+                                <span class="badge badge-success">Valid</span>
+                            {% endif %}
+                        </p>
+                    {% endif %}
                     {% if product.quantity > 0 %}
                     <form method="post" action="{% url 'shop:add_to_cart' product.id shop.id %}">
                         {% csrf_token %}

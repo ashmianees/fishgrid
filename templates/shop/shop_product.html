@@ -24,6 +24,7 @@
                                             <th>Category</th>
                                             <th>Price</th>
                                             <th>Status</th>
+                                            <th>Expiry Date</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
@@ -35,8 +36,30 @@
                                             <td>{{ product.price }}</td>
                                             <td>{{ product.status|yesno:"Enabled,Disabled" }}</td>
                                             <td>
+                                                {% if product.expiry_date %}
+                                                    <span class="{% if product.is_expired %}text-danger{% else %}text-success{% endif %}">
+                                                        {{ product.expiry_date|date:"Y-m-d" }}
+                                                        {% if product.is_expired %}
+                                                            <small>(Expired)</small>
+                                                        {% endif %}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="text-muted">No expiry date</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
                                                 <button class="btn btn-sm btn-info view-btn" data-id="{{ product.id }}" data-name="{{ product.product_name }}" data-description="{{ product.product_description }}" data-size="{{ product.size }}" data-quantity="{{ product.quantity }}" data-price="{{ product.price }}" data-category="{{ product.categories.id }}" data-categoris="{{ categories.category_name }}" data-image="{{ product.image.url }}">View Product</button>
-                                                <button class="btn btn-sm btn-primary edit-btn" data-id="{{ product.id }}" data-name="{{ product.product_name }}" data-description="{{ product.product_description }}" data-size="{{ product.size }}" data-quantity="{{ product.quantity }}" data-price="{{ product.price }}" data-category="{{ product.categories.id }}">Edit</button>
+                                                <button class="btn btn-sm btn-primary edit-btn" 
+                                                    data-id="{{ product.id }}" 
+                                                    data-name="{{ product.product_name }}" 
+                                                    data-description="{{ product.product_description }}" 
+                                                    data-size="{{ product.size }}" 
+                                                    data-quantity="{{ product.quantity }}" 
+                                                    data-price="{{ product.price }}" 
+                                                    data-category="{{ product.categories.id }}"
+                                                    data-expiry-date="{{ product.expiry_date|date:'Y-m-d' }}">
+                                                    Edit
+                                                </button>
                                                 {% if request.user == shop.user %}
                                                     <form action="{% url 'shop:toggle_product' product.id %}" method="post" style="display: inline;">
                                                         {% csrf_token %}
@@ -49,7 +72,7 @@
                                         </tr>
                                         {% empty %}
                                         <tr>
-                                            <td colspan="5">No products found.</td>
+                                            <td colspan="6">No products found.</td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
@@ -143,9 +166,10 @@
                             </div>
                             <!-- Expiration Date Field -->
                             <div class="form-group">
-                                <label for="expire_date">Expiration Date</label>
-                                <input type="date" class="form-control" id="expire_date" name="expire_date" disabled>
-                                <small class="text-danger" id="expire_date_error"></small>
+                                <label for="product_expire_date">Expiry Date (Optional)</label>
+                                <input type="date" class="form-control" id="product_expire_date" name="expire_date" min="{{ today|date:'Y-m-d' }}">
+                                <small class="text-muted">Leave empty if product has no expiry date</small>
+                                <small class="text-danger" id="product_expire_date_error"></small>
                             </div>
                         </div>
                     </div>
@@ -217,6 +241,13 @@
                                 <input type="number" step="0.01" class="form-control" id="edit_product_price" name="product_price" min="1" required>
                                 <small class="text-danger" id="edit_product_price_error"></small>
                             </div>
+                            <!-- Expiration Date Field -->
+                            <div class="form-group">
+                                <label for="edit_expire_date">Expiry Date (Optional)</label>
+                                <input type="date" class="form-control" id="edit_expire_date" name="expire_date" min="{{ today|date:'Y-m-d' }}">
+                                <small class="text-muted">Leave empty if product has no expiry date</small>
+                                <small class="text-danger" id="edit_expire_date_error"></small>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -250,28 +281,37 @@
     </div>
 </div>
 
+<!-- Add these script tags if not already present -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/notify/0.4.2/notify.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const editButtons = document.querySelectorAll('.edit-btn');
-    editButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const productId = this.dataset.id;
-            const productName = this.dataset.name;
-            const productDescription = this.dataset.description;
-            const productSize = this.dataset.size;
-            const productQuantity = this.dataset.quantity;
-            const productPrice = this.dataset.price;
-            const productCategory = this.dataset.category;
-
-            document.getElementById('edit_product_id').value = productId;
-            document.getElementById('edit_product_name').value = productName;
-            document.getElementById('edit_product_description').value = productDescription;
-            document.getElementById('edit_product_size').value = productSize;
-            document.getElementById('edit_product_quantity').value = productQuantity;
-            document.getElementById('edit_product_price').value = productPrice;
-            document.getElementById('edit_product_category').value = productCategory;
-            document.getElementById('edit_product_add_quantity').value = 0; // Default value for add quantity
+    $(document).ready(function() {
+        // Edit button click handler
+        $('.edit-btn').click(function() {
+            const button = $(this);
+            
+            // Get data from button attributes
+            $('#edit_product_id').val(button.data('id'));
+            $('#edit_product_name').val(button.data('name'));
+            $('#edit_product_description').val(button.data('description'));
+            $('#edit_product_size').val(button.data('size'));
+            $('#edit_product_quantity').val(button.data('quantity'));
+            $('#edit_product_price').val(button.data('price'));
+            $('#edit_product_category').val(button.data('category'));
+            $('#edit_product_add_quantity').val(0);
+            
+            // Handle expiry date
+            const expiryDate = button.data('expiry-date');
+            if (expiryDate && expiryDate !== 'None') {
+                $('#edit_expire_date').val(expiryDate);
+            } else {
+                $('#edit_expire_date').val('');
+            }
+    
+            // Show the modal
             $('#editProductModal').modal('show');
         });
     });
@@ -443,7 +483,48 @@ document.addEventListener('DOMContentLoaded', function() {
             expireDateInput.value = ''; // Clear the value if disabled
         }
     });
+
+    // Update the form validation to only check date validity if a date is entered
+    $('#productForm, #editProductForm').on('submit', function(e) {
+        const form = $(this);
+        const expiryDateInput = form.find('input[name="expire_date"]');
+        
+        if (expiryDateInput.val()) {
+            const selectedDate = new Date(expiryDateInput.val());
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            if (selectedDate <= today) {
+                e.preventDefault();
+                alert('Expiry date must be in the future.');
+                return false;
+            }
+        }
+    });
 });
 </script>
 
+<!-- Add this to your existing style section or create one -->
+<style>
+    .text-danger {
+        color: #dc3545 !important;
+    }
+    
+    .text-success {
+        color: #28a745 !important;
+    }
+    
+    .text-muted {
+        color: #6c757d !important;
+    }
+    
+    td small {
+        font-size: 0.85em;
+        font-style: italic;
+    }
+</style>
+
 {% endblock %}
+
+
+
